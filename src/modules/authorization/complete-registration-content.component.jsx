@@ -58,22 +58,23 @@ export function CompleteRegistrationContent() {
                                         className='btn btn-warning mt-3'>
                                         Complete registration
                                     </button>
-                                    <button
-                                        className='btn btn-warning mt-3 mx-3'
-                                        onClick={() => {
-                                            userStore.reset();
-                                            logout({
-                                                returnTo:
-                                                    window.location.origin,
-                                            });
-                                        }}>
-                                        Logout
-                                    </button>
                                 </Form>
                             </Formik>
                         </div>
                     </div>
                 </div>
+            </div>
+            <div className='d-flex justify-content-center'>
+                <button
+                    className='btn btn-warning mt-3 mx-3 align-content-center d-flex'
+                    onClick={() => {
+                        userStore.reset();
+                        logout({
+                            returnTo: window.location.origin,
+                        });
+                    }}>
+                    Logout
+                </button>
             </div>
         </div>
     );
