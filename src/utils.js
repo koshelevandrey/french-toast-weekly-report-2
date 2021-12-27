@@ -72,6 +72,7 @@ export const inviteLinks = {
     },
 };
 
+// Currently not used
 export async function getUserWithFetch(token) {
     try {
         const response = await fetch(

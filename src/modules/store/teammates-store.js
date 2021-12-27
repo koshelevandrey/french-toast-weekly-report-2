@@ -3,6 +3,7 @@ import { apiInvoker } from '../api/api-axios';
 
 export const getAllTeammates = createEffect(async (companyId) => {
     const resp = await apiInvoker.teamMember.getAll(companyId);
+    debugger;
     return resp.data;
 });
 

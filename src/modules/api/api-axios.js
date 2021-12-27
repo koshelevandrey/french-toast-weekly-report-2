@@ -1,26 +1,38 @@
 import axios from 'axios';
 import React from 'react';
 import { createStore, createEvent } from 'effector';
+import { setErrorToStore } from '../store/error-store';
 
-export const setTokenTOStore = createEvent();
-export const tokenFromStore = createStore('').on(
-    setTokenTOStore,
+export const setTokenToStore = createEvent();
+export const tokenFromStore = createStore(null).on(
+    setTokenToStore,
     (_, newToken) => newToken
 );
 
 const tokenHeader = async (config) => {
     const token = tokenFromStore.getState();
-    if (token !== '') {
+    if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
 };
-const authError = (err) => {
-    const status = err?.response?.status;
-    if (status === 401) {
-        //TODO something
+
+const requestErrors = (error) => {
+    const status = error?.request?.status;
+    // Если получили 404 при запросе пользователя, значит ему надо пройти Complete registration,
+    // ошибку возвращать не надо
+    if (status !== 404) {
+        setErrorToStore(error);
     }
-    return Promise.reject(err);
+};
+
+const responseErrors = (error) => {
+    const status = error?.response?.status;
+    // Если получили 404 при запросе пользователя, значит ему надо пройти Complete registration,
+    // ошибку возвращать не надо
+    if (status !== 404) {
+        setErrorToStore(error);
+    }
 };
 
 const instanceAPI = axios.create({
@@ -29,7 +41,8 @@ const instanceAPI = axios.create({
     timeout: 9000,
 });
 instanceAPI.interceptors.request.use(tokenHeader);
-instanceAPI.interceptors.response.use((response) => response, authError);
+instanceAPI.interceptors.request.use((request) => request, requestErrors);
+instanceAPI.interceptors.response.use((response) => response, responseErrors);
 
 export const apiInvoker = {
     companies: {
@@ -120,12 +133,12 @@ export const apiInvoker = {
                 `companies/${companyId}/members/${memberId}/reports`
             );
         },
-        async getInInterval(companyId, memberId, start, end,){
+        async getInInterval(companyId, memberId, start, end) {
             return await instanceAPI.get(
                 `companies/${companyId}/members/${memberId}/reports/extended/${start}/${end}`
             );
         },
-        async getOld(companyId, memberId, currentDate){
+        async getOld(companyId, memberId, currentDate) {
             return await instanceAPI.get(
                 `companies/${companyId}/members/${memberId}/reports/extended/old/${currentDate}`
             );

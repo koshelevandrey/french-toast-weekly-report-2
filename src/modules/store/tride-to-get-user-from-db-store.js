@@ -1,7 +1,7 @@
 import { createStore, createEvent } from 'effector';
 
-export const setTriedGetUserFromDBToStore = createEvent();
-export const triedGetUserFromDBStore = createStore(false).on(
-    setTriedGetUserFromDBToStore,
+export const setTriedToGetUserFromDBToStore = createEvent();
+export const triedToGetUserFromDBStore = createStore(false).on(
+    setTriedToGetUserFromDBToStore,
     (_, newTriedGetUserFromDB) => newTriedGetUserFromDB
 );

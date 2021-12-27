@@ -10,11 +10,11 @@ import { Form, Formik } from 'formik';
 import { useStore } from 'effector-react';
 import { apiInvoker } from '../../api/api-axios';
 import { companyStore, getCompany } from '../../store/company-store';
-import { userStore } from '../../store/user-store';
+import { userInDBStore } from '../../store/user-store';
 
 export function MyCompanyComponent() {
     const { name: companyName, joinedDate, companyId } = useStore(companyStore);
-    const userInDB = useStore(userStore);
+    const userInDB = useStore(userInDBStore);
     useEffect(() => {
         getCompany(userInDB.companyId);
     }, []);

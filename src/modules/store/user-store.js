@@ -1,28 +1,24 @@
 import { createStore, createEffect, createEvent } from 'effector';
 import { apiInvoker } from '../api/api-axios';
 
-export const getUser = createEffect(async () => {
-    try {
-        const resp = await apiInvoker.user.get();
-        return resp.data;
-    } catch (error) {
-        return error;
-    }
+export const getUserFromDB = createEffect(async () => {
+    const resp = await apiInvoker.user.get();
+    return resp.data;
 });
 
-export const setUserToStore = createEvent();
-export const userStore = createStore({
-    id: 0,
+export const setUserInDBToStore = createEvent();
+export const userInDBStore = createStore({
+    id: null,
     firstName: '',
     lastName: '',
     email: '',
     title: '',
     companyName: '',
-    companyId: '',
+    companyId: null,
     joinedDate: '',
-}).on(setUserToStore, (_, newUser) => newUser);
+}).on(setUserInDBToStore, (_, newUser) => newUser);
 
-userStore.on(getUser.doneData, (state, data) => {
+userInDBStore.on(getUserFromDB.doneData, (state, data) => {
     if (data instanceof Error) {
         return state;
     }

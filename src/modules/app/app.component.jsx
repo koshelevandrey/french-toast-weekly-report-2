@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Route, Router, Routes } from 'react-router-dom';
 
 import { SidebarComponent } from '../common/components/sidebar/sidebar.component';
 import { LaunchGuide } from '../pages/launch-guide/launch-guide.component';
@@ -30,17 +30,18 @@ import { Login } from '../common/components/login/login.component';
 import { AcceptInviteComponent } from '../pages/accept-invite/accept-invite.component';
 import { CompleteRegistration } from '../pages/complete-registration/complete-registration.component';
 import { useStore } from 'effector-react';
-import { userStore } from '../store/user-store';
+import { getUserFromDB, userInDBStore } from '../store/user-store';
 import {
     isWaitingResponse,
-    waitingResponse,
+    setIsWaitingResponse,
 } from '../store/user-request-store';
-import { LoginPage } from '../pages/login/login-page.component';
 import { errorStore } from '../store/error-store';
 import { ErrorPage } from '../pages/error/error-page.component';
-import { LoadingUserFromDB } from '../common/components/loading/loading-user-from-db.component';
-import { triedGetUserFromDBStore } from '../store/tride-to-get-user-from-db-store';
-import { setTokenTOStore } from '../api/api-axios';
+import {
+    setTriedToGetUserFromDBToStore,
+    triedToGetUserFromDBStore,
+} from '../store/tride-to-get-user-from-db-store';
+import { setTokenToStore, tokenFromStore } from '../api/api-axios';
 
 export function App() {
     const isWaitingLoad = useStore(isWaitingResponse);
@@ -50,21 +51,51 @@ export function App() {
         loginWithPopup,
         getAccessTokenSilently,
     } = useAuth0();
-    const userInDB = useStore(userStore);
+    const userInDB = useStore(userInDBStore);
     const innerError = useStore(errorStore);
-    const triedToGetUserFromDB = useStore(triedGetUserFromDBStore);
+    const storeToken = useStore(tokenFromStore);
+    const triedToGetUserFromDB = useStore(triedToGetUserFromDBStore);
 
+    // Эффект, осуществляющий авторизацию через Auth0
     useEffect(async () => {
-        if (isAuthenticated) {
+        if (!isAuthenticated && !isLoading && !isWaitingLoad) {
+            setIsWaitingResponse(true);
             try {
-                const token = await getAccessTokenSilently();
-                await setTokenTOStore(token);
+                await loginWithPopup();
             } catch (error) {
                 console.error(error);
                 return error;
+            } finally {
+                setIsWaitingResponse(false);
+            }
+        }
+    }, [isAuthenticated, isLoading, isWaitingLoad]);
+
+    // Эффект, кладущий токен в store после авторизации через Auth0
+    useEffect(async () => {
+        if (isAuthenticated) {
+            setIsWaitingResponse(true);
+            try {
+                const token = await getAccessTokenSilently();
+                await setTokenToStore(token);
+            } catch (error) {
+                console.error(error);
+                return error;
+            } finally {
+                setIsWaitingResponse(false);
             }
         }
     }, [isAuthenticated]);
+
+    // Эффект, делающий запрос на пользователя в БД и кладущий его в store в случае успеха
+    useEffect(async () => {
+        if (isAuthenticated && storeToken) {
+            setIsWaitingResponse(true);
+            await getUserFromDB();
+            setIsWaitingResponse(false);
+            setTriedToGetUserFromDBToStore(true);
+        }
+    }, [isAuthenticated, storeToken]);
 
     if (innerError) {
         return <ErrorPage error={innerError} />;
@@ -78,6 +109,7 @@ export function App() {
     if (window.location.pathname.startsWith('/accept-invite/')) {
         return (
             <Routes>
+                <Route path='/' element={<App />} />
                 <Route
                     path='/accept-invite/:hashedParams'
                     element={
@@ -89,27 +121,11 @@ export function App() {
                 />
             </Routes>
         );
-    } else if (!isAuthenticated) {
-        return <LoginPage />;
-    } else if (!triedToGetUserFromDB) {
-        return <LoadingUserFromDB />;
     }
 
-    if (isLoading || isWaitingLoad) {
-        return <Loading />;
-    }
-
-    if (userInDB.companyId === '') {
+    if (isAuthenticated && storeToken && triedToGetUserFromDB && !userInDB.id) {
         // Пользователь авторизован через Auth0, но в БД его нет, показываем страницу Complete Registration
-        return (
-            <div className='d-flex h-100 justify-content-center'>
-                {isWaitingLoad || isLoading ? (
-                    <Loading />
-                ) : (
-                    <CompleteRegistration />
-                )}
-            </div>
-        );
+        return <CompleteRegistration />;
     }
 
     // Пользователь авторизован через Auth0 и есть в БД, показываем обычную страницу

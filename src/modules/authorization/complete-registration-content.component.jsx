@@ -4,7 +4,7 @@ import { Form, Formik } from 'formik';
 import { createCompany } from '../store/all-companies-store';
 import { createMember } from '../store/team-member-store';
 import { useAuth0 } from '@auth0/auth0-react';
-import { userStore } from '../store/user-store';
+import { userInDBStore } from '../store/user-store';
 
 export function CompleteRegistrationContent() {
     const initFormValues = {
@@ -68,7 +68,7 @@ export function CompleteRegistrationContent() {
                 <button
                     className='btn btn-warning mt-3 mx-3 align-content-center d-flex'
                     onClick={() => {
-                        userStore.reset();
+                        userInDBStore.reset();
                         logout({
                             returnTo: window.location.origin,
                         });

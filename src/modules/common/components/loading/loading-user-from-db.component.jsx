@@ -1,18 +1,19 @@
 import React from 'react';
 import loadingImg from '../../../../img/loading.svg';
 import { setErrorToStore } from '../../../store/error-store';
-import { setUserToStore } from '../../../store/user-store';
+import { setUserInDBToStore } from '../../../store/user-store';
 import { getUserWithFetch } from '../../../../utils';
-import { setTriedGetUserFromDBToStore } from '../../../store/tride-to-get-user-from-db-store';
+import { setTriedToGetUserFromDBToStore } from '../../../store/tride-to-get-user-from-db-store';
 import { useAuth0 } from '@auth0/auth0-react';
-import { setTokenTOStore } from '../../../api/api-axios';
+import { setTokenToStore } from '../../../api/api-axios';
 
+// Currently not used
 export function LoadingUserFromDB() {
     const { getAccessTokenSilently } = useAuth0();
     const getUserFromDBToUserStore = async () => {
         try {
             const token = await getAccessTokenSilently();
-            setTokenTOStore(token);
+            setTokenToStore(token);
             const { user, error, responseStatus } = await getUserWithFetch(
                 token
             );
@@ -22,16 +23,15 @@ export function LoadingUserFromDB() {
                 return;
             }
             if (error !== null) {
-                debugger;
                 setErrorToStore(error);
             } else {
-                setUserToStore(user);
+                setUserInDBToStore(user);
             }
         } catch (error) {
             console.error(error);
             return error;
         } finally {
-            setTriedGetUserFromDBToStore(true);
+            setTriedToGetUserFromDBToStore(true);
         }
     };
 

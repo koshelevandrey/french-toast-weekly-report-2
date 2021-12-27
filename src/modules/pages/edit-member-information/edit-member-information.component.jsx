@@ -12,11 +12,12 @@ import { Helmet } from 'react-helmet';
 import { useAuth0 } from '@auth0/auth0-react';
 import { Form, Formik } from 'formik';
 import { useStore } from 'effector-react';
-import { getUser, userStore } from '../../store/user-store';
+import { getUserFromDB, userInDBStore } from '../../store/user-store';
 import { apiInvoker } from '../../api/api-axios';
 import { getAllTeammates, teammatesStore } from '../../store/teammates-store';
 import { inviteLinks } from '../../../utils';
 import { companyStore, getCompany } from '../../store/company-store';
+import { Loading } from '../../common/components/loading/loading.component';
 
 export function EditMemberInformation({
     firstName,
@@ -29,9 +30,10 @@ export function EditMemberInformation({
     inviteLink,
     allMembers = [],
 }) {
-    const userInDB = useStore(userStore);
+    const userInDB = useStore(userInDBStore);
     const company = useStore(companyStore);
     const allTeammates = useStore(teammatesStore);
+    const [initialized, setInitialized] = useState(false);
 
     const [EditLeadersModal, openEditLeaders, closeEditLeaders] = useModal(
         'root',
@@ -40,14 +42,32 @@ export function EditMemberInformation({
             closeOnOverlayClick: false,
         }
     );
-    useEffect(() => {
-        getAllTeammates(userInDB.companyId);
-    }, [userInDB.companyId]);
+
+    let leadersTagNames, membersTagNames;
+    useEffect(async () => {
+        setInitialized(false);
+        await getUserFromDB();
+        await getCompany(userInDB.companyId);
+        debugger;
+        await getAllTeammates(userInDB.companyId);
+        debugger;
+        leadersTagNames = await userInDB.leaders.map(
+            (member) => `${member.firstName} ${member.lastName}`
+        );
+        debugger;
+        membersTagNames = await userInDB.teammates.map(
+            (member) => `${member.firstName} ${member.lastName}`
+        );
+        debugger;
+        inviteLink = inviteLinks.generateLink(userInDB, company.name);
+        debugger;
+        setInitialized(true);
+    }, [userInDB]);
 
     async function onLeadersSave(leaders) {
         const leadersId = leaders.map((el) => el.id);
         await apiInvoker.links.updateLeaders(userInDB.id, leadersId);
-        getUser();
+        getUserFromDB();
         closeEditLeaders();
     }
     const [
@@ -61,16 +81,9 @@ export function EditMemberInformation({
     async function onReportingMembersSave(followers) {
         const followersId = followers.map((el) => el.id);
         await apiInvoker.links.updateFollowers(userInDB.id, followersId);
-        getUser();
+        getUserFromDB();
         closeEditReportingMembers();
     }
-
-    const leadersTagNames = userInDB.leaders.map(
-        (member) => `${member.firstName} ${member.lastName}`
-    );
-    const membersTagNames = userInDB.teammates.map(
-        (member) => `${member.firstName} ${member.lastName}`
-    );
 
     let { user } = useAuth0();
 
@@ -89,6 +102,7 @@ export function EditMemberInformation({
         lastName: userInDB.lastName,
         title: userInDB.title,
     };
+
     const onSubmit = async (values, { setSubmitting }) => {
         await apiInvoker.teamMember.updateMember(
             userInDB.companyId,
@@ -97,11 +111,9 @@ export function EditMemberInformation({
             values.lastName,
             values.title
         );
-        await getUser();
+        await getUserFromDB();
         setSubmitting(false);
     };
-    getCompany();
-    inviteLink = inviteLinks.generateLink(userInDB, company.name);
 
     return (
         <main className='flex-grow-1 overflow-auto'>
@@ -113,102 +125,110 @@ export function EditMemberInformation({
                 last_name={userInDB.lastName}
                 email={userInDB.email}
             />
-            <div className='p-5 mx-5 d-flex flex-column'>
-                <TitleBlockComponent
-                    title={`Edit ${userInDB.firstName}'s information`}>
-                    You may assign leaders or team members to this person, as
-                    well as deactivate their account if they no longer work for
-                    your organization.
-                </TitleBlockComponent>
-                <ContentBlockComponent title='Basic profile information'>
-                    <Formik initialValues={formInitValues} onSubmit={onSubmit}>
-                        <Form>
-                            <EditFieldComponent
-                                label='First Name'
-                                width='280px'
-                                value={userInDB.firstName}
-                            />
-                            <EditFieldComponent
-                                label='Last Name'
-                                width='340px'
-                                value={userInDB.lastName}
-                            />
-                            <EditFieldComponent
-                                label='Title'
-                                width='400px'
-                                value={userInDB.title}
-                            />
+            {initialized ? (
+                <>
+                    <div className='p-5 mx-5 d-flex flex-column'>
+                        <TitleBlockComponent
+                            title={`Edit ${userInDB.firstName}'s information`}>
+                            You may assign leaders or team members to this
+                            person, as well as deactivate their account if they
+                            no longer work for your organization.
+                        </TitleBlockComponent>
+                        <ContentBlockComponent title='Basic profile information'>
+                            <Formik
+                                initialValues={formInitValues}
+                                onSubmit={onSubmit}>
+                                <Form>
+                                    <EditFieldComponent
+                                        label='First Name'
+                                        width='280px'
+                                        value={userInDB.firstName}
+                                    />
+                                    <EditFieldComponent
+                                        label='Last Name'
+                                        width='340px'
+                                        value={userInDB.lastName}
+                                    />
+                                    <EditFieldComponent
+                                        label='Title'
+                                        width='400px'
+                                        value={userInDB.title}
+                                    />
+                                    <button
+                                        className='btn btn-warning mt-2'
+                                        type='submit'>
+                                        Save
+                                    </button>
+                                </Form>
+                            </Formik>
+                        </ContentBlockComponent>
+                        <ContentBlockComponent
+                            title={`${userInDB.firstName} reports to the following leaders:`}>
+                            <TagRowComponent tag_names={leadersTagNames} />
+                            <a href='#'>
+                                <button
+                                    className='btn btn-outline-dark mt-3'
+                                    type='button'
+                                    onClick={openEditLeaders}>
+                                    Edit Leader(s)
+                                </button>
+                            </a>
+                        </ContentBlockComponent>
+                        <ContentBlockComponent
+                            title={`The following team members report to ${userInDB.firstName}:`}>
+                            <TagRowComponent tag_names={membersTagNames} />
                             <button
-                                className='btn btn-warning mt-2'
-                                type='submit'>
-                                Save
+                                className='btn btn-outline-dark mt-3'
+                                type='button'
+                                onClick={openEditReportingMembers}>
+                                Edit Member(s)
                             </button>
-                        </Form>
-                    </Formik>
-                </ContentBlockComponent>
-                <ContentBlockComponent
-                    title={`${userInDB.firstName} reports to the following leaders:`}>
-                    <TagRowComponent tag_names={leadersTagNames} />
-                    <a href='#'>
-                        <button
-                            className='btn btn-outline-dark mt-3'
-                            type='button'
-                            onClick={openEditLeaders}>
-                            Edit Leader(s)
-                        </button>
-                    </a>
-                </ContentBlockComponent>
-                <ContentBlockComponent
-                    title={`The following team members report to ${userInDB.firstName}:`}>
-                    <TagRowComponent tag_names={membersTagNames} />
-                    <button
-                        className='btn btn-outline-dark mt-3'
-                        type='button'
-                        onClick={openEditReportingMembers}>
-                        Edit Member(s)
-                    </button>
-                </ContentBlockComponent>
-                <ContentBlockComponent
-                    title={`${userInDB.firstName}'s invite link`}
-                    className='d-flex flex-column justify-content-center'>
-                    <p>
-                        Share the following link to invite team members on{' '}
-                        {userInDB.firstName}&apos;s behalf.
-                    </p>
-                    <label className='d-none' htmlFor='link-for-invite'>
-                        Link to invite team members
-                    </label>
-                    <textarea
-                        id='link-for-invite'
-                        className='form-control copy-link-textarea mx-auto'
-                        readOnly>
-                        {inviteLink}
-                    </textarea>
-                    <button
-                        className='btn btn-warning m-3 mx-auto'
-                        type='button'>
-                        Copy Link
-                    </button>
-                </ContentBlockComponent>
-            </div>
-            <EditLeadersModal>
-                <EditMembersPopupComponent
-                    membersToEdit={userInDB.leaders}
-                    onSave={onLeadersSave}
-                    memberType={'Leader'}
-                    onClose={closeEditLeaders}
-                    availableMembers={allTeammates}
-                />
-            </EditLeadersModal>
-            <EditReportingMembersModal>
-                <EditMembersPopupComponent
-                    membersToEdit={userInDB.teammates}
-                    onSave={onReportingMembersSave}
-                    memberType={'Member'}
-                    onClose={closeEditReportingMembers}
-                    availableMembers={allTeammates}
-                />
-            </EditReportingMembersModal>
+                        </ContentBlockComponent>
+                        <ContentBlockComponent
+                            title={`${userInDB.firstName}'s invite link`}
+                            className='d-flex flex-column justify-content-center'>
+                            <p>
+                                Share the following link to invite team members
+                                on {userInDB.firstName}&apos;s behalf.
+                            </p>
+                            <label className='d-none' htmlFor='link-for-invite'>
+                                Link to invite team members
+                            </label>
+                            <textarea
+                                id='link-for-invite'
+                                className='form-control copy-link-textarea mx-auto'
+                                readOnly>
+                                {inviteLink}
+                            </textarea>
+                            <button
+                                className='btn btn-warning m-3 mx-auto'
+                                type='button'>
+                                Copy Link
+                            </button>
+                        </ContentBlockComponent>
+                    </div>
+                    <EditLeadersModal>
+                        <EditMembersPopupComponent
+                            membersToEdit={userInDB.leaders}
+                            onSave={onLeadersSave}
+                            memberType={'Leader'}
+                            onClose={closeEditLeaders}
+                            availableMembers={allTeammates}
+                        />
+                    </EditLeadersModal>
+                    <EditReportingMembersModal>
+                        <EditMembersPopupComponent
+                            membersToEdit={userInDB.teammates}
+                            onSave={onReportingMembersSave}
+                            memberType={'Member'}
+                            onClose={closeEditReportingMembers}
+                            availableMembers={allTeammates}
+                        />
+                    </EditReportingMembersModal>{' '}
+                </>
+            ) : (
+                <Loading />
+            )}
         </main>
     );
 }

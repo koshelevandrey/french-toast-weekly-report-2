@@ -2,23 +2,23 @@ import React from 'react';
 import { TextHeaderComponent } from '../../headers/text-header/text-header.component';
 import { Helmet } from 'react-helmet';
 import { useAuth0 } from '@auth0/auth0-react';
-import { setTokenTOStore } from '../../api/api-axios';
-import { waitingResponse } from '../../store/user-request-store';
+import { setTokenToStore } from '../../api/api-axios';
+import { setIsWaitingResponse } from '../../store/user-request-store';
 
 export function LoginPage() {
     const { getAccessTokenSilently, loginWithPopup } = useAuth0();
 
     const onClick = async () => {
         await loginWithPopup();
-        waitingResponse(true);
+        setIsWaitingResponse(true);
         try {
             const token = await getAccessTokenSilently();
-            await setTokenTOStore(token);
+            await setTokenToStore(token);
         } catch (error) {
             console.error(error);
             return error;
         } finally {
-            waitingResponse(false);
+            setIsWaitingResponse(false);
         }
     };
 

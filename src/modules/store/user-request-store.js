@@ -1,8 +1,8 @@
 import { createStore, createEvent } from 'effector';
 
-export const waitingResponse = createEvent();
+export const setIsWaitingResponse = createEvent();
 
 export const isWaitingResponse = createStore(false).on(
-    waitingResponse,
+    setIsWaitingResponse,
     (_, status) => status
 );

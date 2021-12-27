@@ -4,7 +4,7 @@ import { Helmet } from 'react-helmet';
 
 import PropTypes from 'prop-types';
 import inner_error from '../../../img/inner-error.png';
-import { userStore } from '../../store/user-store';
+import { userInDBStore } from '../../store/user-store';
 import { useAuth0 } from '@auth0/auth0-react';
 
 export function ErrorPage({ error }) {
@@ -49,7 +49,7 @@ export function ErrorPage({ error }) {
                     <button
                         className='btn btn-warning mt-3 mx-3 align-content-center d-flex'
                         onClick={() => {
-                            userStore.reset();
+                            userInDBStore.reset();
                             logout({
                                 returnTo: window.location.origin,
                             });

@@ -3,7 +3,7 @@ import { InviteYourTeamSuccessMessageComponent } from './invite-your-team-succes
 import { EditFieldComponent } from '../common/components/edit-field/edit-field.component';
 import { Form, Formik } from 'formik';
 import { inviteLinks } from '../../utils';
-import { userStore } from '../store/user-store';
+import { userInDBStore } from '../store/user-store';
 import { useStore } from 'effector-react';
 import { companyStore, getCompany } from '../store/company-store';
 import { apiInvoker } from '../api/api-axios';
@@ -15,13 +15,18 @@ export function InviteYourTeamContent() {
         lastName: '',
         email: '',
     };
-    const userInDb = useStore(userStore);
+    const userInDb = useStore(userInDBStore);
     const company = useStore(companyStore);
     const onSubmit = async (values, { setSubmitting }) => {
         setTimeout(async () => {
             let resp = await apiInvoker.companies.get(userInDb.companyId);
             console.log(resp.data.name);
             console.log(company.name);
+            //
+            console.log(
+                inviteLinks.generateLink(userInDb, resp.data.name, values)
+            );
+            //
             alert(
                 `This link should be sent to ${values.email} with the title "Accept invite":\n` +
                     `${inviteLinks.generateLink(
